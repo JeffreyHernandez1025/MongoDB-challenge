@@ -1,49 +1,72 @@
 // Will help us access .env files
-require('dotenv').config();
-// All other Deps
-const express = require('express');
-const MongoClient = require('mongodb').MongoClient;
-const cors = require('cors');
+require('dotenv').config()
 
-const app = express();
-const port = process.env.PORT;
-const mongo_uri = process.env.MONGO_URI;
+const express = require('express')
+const mongoose = require('mongoose')
+const cors = require('cors')
+// Models or Schema
+const Journal = require('./Models/Journal')
+
+const server = express()
+const port = process.env.PORT
+const uri = process.env.MONGO_URI
 
 // set up your middleware
-app.use(express.json());
-app.use(cors());
+server.use(express.json())
+server.use(cors())
+server.use(express.urlencoded({ extended: true }))
 
-// Extablish connection to mongodb
-MongoClient.connect(mongo_uri, { useNewUrlParser: true, useUnifiedTopology: true }, (err, client) => {
-    if (err) throw err;
+// connection to MongoDB
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
 
-    console.log('connected')
+const db = mongoose.connection
+db.on('error', console.error.bind(console, 'Failed to connect to MongoDB'))
+db.once('open', () => {
+  console.log('Connection to MongoDB established!')
+})
 
-    db = client.db('journals')
-});
+// Routes
 
+// Post
+server.post('/add-journal', (req, res) => {
+  const incomingData = req.body
+  const newJournal = new Journal(incomingData)
 
-// Add journal to server
-app.post('/add-journal', (req, res) => {
-    // Gets the data from method post, data sent from Postman
-    const incomingData = req.body;
-    // Adds journal to the mongodb
-    db.collection('journal-entry').insertOne(incomingData, (err, result) => {
-        if (err) throw err;
+  newJournal.save((err, result) => {
+    if (err) {
+      res.status(500).send({
+        msg: 'Error in the server',
+      })
+    }
 
-        res.status(200).send(result);
-    });
-    
-});
-
-
-// Index get request
-app.get('/', (req, res) => {
     res.status(200).send({
-        message: "server ok"
+      msg: 'Journal was created',
+      document: result,
     })
+  })
 });
 
-app.listen(port, () => {
-    console.log(`Server running on port: ${port}`);
-});
+server.get('/get-all-journals', (req, res) =>{
+   Journal.find({}, (err, result) => {
+    if(err) {
+        res.status(500).send({
+            msg: 'Error while finding the Journals'
+        })
+    }
+    res.status(200).send({
+        msg: 'Journals found',
+        document: result
+    })
+   })
+})
+
+// Index route
+server.get('/', (req, res) => {
+  res.status(200).send({
+    msg: 'server is running',
+  })
+})
+
+server.listen(port, () => {
+  console.log(`Listening ${port}`)
+})
