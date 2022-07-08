@@ -60,6 +60,20 @@ server.get('/get-all-journals', (req, res) =>{
    })
 })
 
+server.delete('/delete-journal', (req, res) =>{
+    Journal.deleteOne({_id: req.body._id}, (err, results) =>{
+        if(err) {
+            res.status(500).send({
+                msg: 'Error while deleting journal',
+            })
+        }
+        res.status(200).send({
+            msg: 'Journal deleted/',
+            document: result,
+        })
+    })
+})
+
 // Index route
 server.get('/', (req, res) => {
   res.status(200).send({
